@@ -1,3 +1,3 @@
-# Picross Randomizer Setup Guide
+# Nonogram Randomizer Setup Guide
 
 Generate, host, go to the site, login, play!

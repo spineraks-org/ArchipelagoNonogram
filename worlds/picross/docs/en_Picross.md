@@ -1,3 +1,0 @@
-# Picross
-
-Picross for Archipelago!
