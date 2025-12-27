@@ -3,6 +3,7 @@ from BaseClasses import Tutorial, Item, ItemClassification, Location, Region
 from dataclasses import dataclass
 from Options import PerGameCommonOptions, Choice
 import json
+import os
 from pathlib import Path
 from worlds.generic.Rules import set_rule
 
@@ -37,7 +38,7 @@ class NonogramWorld(World):
     web = NonogramWeb()
     item_name_to_id = {"Nonogram clues": 67}
     location_name_to_id = {f"Progress {i}": 67 + i for i in range(1,101)}
-    ap_world_version = "0.0.2"
+    ap_world_version = "0.0.3"
     
     def create_item(self, name: str, code: int) -> Item:
         return Item(name, ItemClassification.progression, code, self.player)
@@ -47,8 +48,8 @@ class NonogramWorld(World):
         
     def generate_early(self):
         #load puzzle data and read number of steps
-        data_path = Path(__file__).parent / "data" / f"pl_{self.options.size_of_grid.value}.json"
-        with open(data_path, "r", encoding="utf-8") as file:  data = json.load(file)
+        from .puzzles import L
+        data = L[self.options.size_of_grid.value]
         self.chosen_puzzle = self.random.choice(data)
         spl = self.chosen_puzzle.split("_")
         num_steps = int(spl[3])
