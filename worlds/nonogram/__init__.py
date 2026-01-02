@@ -1,11 +1,12 @@
 from worlds.AutoWorld import WebWorld, World
 from BaseClasses import Tutorial, Item, ItemClassification, Location, Region
 from dataclasses import dataclass
-from Options import PerGameCommonOptions, Choice
+from Options import PerGameCommonOptions, Range
 import json
 import os
 from pathlib import Path
 from worlds.generic.Rules import set_rule
+from .puzzle_generator.build_puzzle import build_puzzle
 
 class NonogramWeb(WebWorld):
     tutorials = [
@@ -19,18 +20,28 @@ class NonogramWeb(WebWorld):
         )
     ]
 
-class SizeOfGrid(Choice):
+class WidthOfGrid(Range):
     """
-    Size of the Nonogram grid.
+    Width of the Nonogram grid.
     """
-    display_name = "Size of Grid"
-    option_5x5 = 5
-    option_10x10 = 10
+    display_name = "Width of Grid"
+    range_start = 5
+    range_end = 15
+    default = 5
+    
+class HeightOfGrid(Range):
+    """
+    Height of the Nonogram grid.
+    """
+    display_name = "Height of Grid"
+    range_start = 5
+    range_end = 15
     default = 5
 
 @dataclass
 class NonogramOptions(PerGameCommonOptions):
-    size_of_grid: SizeOfGrid
+    width_of_grid: WidthOfGrid
+    height_of_grid: HeightOfGrid
 
 class NonogramWorld(World):
     game: str = "Nonogram"
@@ -38,7 +49,7 @@ class NonogramWorld(World):
     web = NonogramWeb()
     item_name_to_id = {"Nonogram clues": 67}
     location_name_to_id = {f"Progress {i}": 67 + i for i in range(1,101)}
-    ap_world_version = "0.0.3"
+    ap_world_version = "0.1.0"
     
     def create_item(self, name: str, code: int) -> Item:
         return Item(name, ItemClassification.progression, code, self.player)
@@ -47,12 +58,8 @@ class NonogramWorld(World):
         return "Nonogram clues"    
         
     def generate_early(self):
-        #load puzzle data and read number of steps
-        from .puzzles import L
-        data = L[self.options.size_of_grid.value]
-        self.chosen_puzzle = self.random.choice(data)
-        spl = self.chosen_puzzle.split("_")
-        num_steps = int(spl[3])
+        self.puzzle = build_puzzle(self.options.width_of_grid.value, self.options.height_of_grid.value, [], self.random)
+        num_steps = len(list(set([clue[1] for clue in self.puzzle['G']])))
         
         #items - equal to the number of steps + 1, you start with one
         self.multiworld.itempool += [self.create_item("Nonogram clues", 67) for _ in range(num_steps)]
@@ -73,8 +80,8 @@ class NonogramWorld(World):
         self.multiworld.completion_condition[self.player] = lambda state: state.has("Nonogram clues", self.player, num_steps)
         
     def fill_slot_data(self):
-        return {'puzzle': self.chosen_puzzle, 'apworld_version': self.ap_world_version}
+        return {'puzzle': json.dumps(self.puzzle, separators=(',',':')), 'apworld_version': self.ap_world_version}
     
     def write_spoiler(self, spoiler_handle) -> None:
-        spoiler_handle.write(f"Puzzle: {self.chosen_puzzle}\n")
+        spoiler_handle.write(f"Puzzle: {self.puzzle}\n")
         
