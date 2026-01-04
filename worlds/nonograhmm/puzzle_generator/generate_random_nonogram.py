@@ -28,7 +28,7 @@ def get_clues_from_grid(grid):
     return [column_clues, row_clues]
 
 def generate_random_clues(x, y, n_white, random):
-    print("Generating random clues for grid size", x, "x", y, "with desired white", n_white)
+    # print("Generating random clues for grid size", x, "x", y, "with desired white", n_white)
     grid = [[1 for _ in range(x)] for _ in range(y)]
     W = 0
         
