@@ -1,6 +1,8 @@
 
 import copy
-import json
+# import json
+
+# from tqdm import tqdm
 
 from .generate_random_nonogram import generate_random_clues
 from .nonogram_solver import solve_nonogram_simple
@@ -29,18 +31,18 @@ def build_up_game(clues, list_of_symbols, random):
     orig = [ [list(cl) for cl in part] for part in (clues[0], clues[1]) ]
     
     sss = solve_nonogram_simple(orig)
-    print("Nonogram solved successfully")
+    # print("Nonogram solved successfully")
     if sss is False:
-        return False
+        raise Exception("Nonogram: Original clues unsolvable")
     SOL, N = sss
     
     # if SOL doesn't contain any 0s:
     if N == len(clues[0]) * len(clues[1]):
-        print("The provided clues lead to a unique solution!")
-        showSolution(SOL)
+        # print("The provided clues lead to a unique solution!")
+        # showSolution(SOL)
         pass
     else:
-        print("The provided clues do not lead to a unique solution.")
+        # print("The provided clues do not lead to a unique solution.")
         return False
     
 
@@ -52,7 +54,7 @@ def build_up_game(clues, list_of_symbols, random):
         for side in (0, 1):
             for li, cl in enumerate(mask[side]):
                 for pi, val in enumerate(cl):
-                    if val == "?" or val == 'Ω' or val == 'Ε':
+                    if val == "?" or val == 'Ω' or val == 'E':
                         pos.append((side, li, pi))
         return pos
 
@@ -60,7 +62,7 @@ def build_up_game(clues, list_of_symbols, random):
     # initial solve with all "?"
     top_mask = [list(cl) for cl in masked[0]]
     left_mask = [list(cl) for cl in masked[1]]
-    print("Starting initial solve with all clues masked...")
+    # print("Starting initial solve with all clues masked...")
     solution, marked = solve_nonogram_simple([top_mask, left_mask])
     steps.append({
         "step": 0,
@@ -70,22 +72,26 @@ def build_up_game(clues, list_of_symbols, random):
     })
     step = 1
     positions = collect_positions(masked)
-    print(f"Starting build-up: {marked} cells marked, {len(positions)} clues to reveal.")
+    # print(f"Starting build-up: {marked} cells marked, {len(positions)} clues to reveal.")
     
+    # with tqdm(total=len(positions), desc="Building up Nonogram puzzle") as pbar:
     while marked < len(clues[0]) * len(clues[1]):
         side, li, pi = random.choice(positions)
         # install the real value from orig into masked
         value = orig[side][li][pi]
         
+        possible_other_clues = []
         if masked[side][li][pi] == '?':
             if value % 2 == 1 and 'Ω' in list_of_symbols:
-                masked[side][li][pi] = 'Ω'
-                value = 'Ω'
-            elif value % 2 == 0 and 'Ε' in list_of_symbols:
-                masked[side][li][pi] = 'Ε'
-                value = 'Ε'
+                possible_other_clues.append('Ω')
+            elif value % 2 == 0 and 'E' in list_of_symbols:
+                possible_other_clues.append('E')
+
+        if possible_other_clues:
+            masked[side][li][pi] = random.choice(possible_other_clues)
         else:
             masked[side][li][pi] = value
+            # pbar.update(1)
 
         # prepare solver input (deep copy to avoid accidental sharing)
         top_mask = [list(cl) for cl in masked[0]]
@@ -97,8 +103,8 @@ def build_up_game(clues, list_of_symbols, random):
         # print("-")
         
         if not S:
-            print("Error: puzzle became unsolvable after revealing clue", (side, li, pi, value))
-            return False
+            # print("Error: puzzle became unsolvable after revealing clue", (side, li, pi, value))
+            raise Exception("Nonogram: Puzzle became unsolvable")
         solution, marked = S
         
         steps.append({
@@ -119,7 +125,12 @@ def showSolution(solution):
         print()
     print()
 
-def build_puzzle(x, y, list_of_symbols, random):
+def build_puzzle(options, random):
+    x = options.width_of_grid.value
+    y = options.height_of_grid.value
+    list_of_symbols = options.clue_types.value
+    
+    
     rando_clues, G = generate_random_clues(x, y, x*y/4, random)
     if not rando_clues:
         return False
@@ -131,7 +142,7 @@ def build_puzzle(x, y, list_of_symbols, random):
         left_clues
     ]
 
-    print(f"Generated {x}x{y} clues, starting build-up...")
+    # print(f"Generated {x}x{y} clues, starting build-up...")
     build_up = build_up_game(CLUES, list_of_symbols, random)
     if not build_up:
         return False
@@ -155,7 +166,7 @@ def build_puzzle(x, y, list_of_symbols, random):
         "G": clue_order,
         "S": steps[-1]["solution"],
     }
-    print(output)
+    # print(output)
     # showSolution(output["S"])
     
     return output

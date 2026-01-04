@@ -41,7 +41,7 @@ def find_any_solution(clues, grid_line):
             min_lengths.append(1)
             max_lengths.append(m)
             possible_lengths.append(list(range(1, m + 1, 2)))
-        elif c == 'Ε':
+        elif c == 'E':
             min_lengths.append(2)
             max_lengths.append(m)
             possible_lengths.append(list(range(2, m + 1, 2)))
@@ -70,7 +70,7 @@ def find_any_solution(clues, grid_line):
         max_start = len(grid_line) - min_total_from_idx
 
         for s in range(pos_min, max_start + 1):
-            if clues[idx] not in ['?', 'Ω', 'Ε']:
+            if clues[idx] not in ['?', 'Ω', 'E']:
                 length = int(clues[idx])
                 curr.append([s, length])
                 backtrack(idx + 1, s + length + 1)
