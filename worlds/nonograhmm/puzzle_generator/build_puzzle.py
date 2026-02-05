@@ -146,7 +146,7 @@ def build_up_game(clues, list_of_symbols, random):
         
         steps.append({
             "step": step,
-            "changed": (side, li, pi, value),
+            "changed": (side, li, pi, masked[side][li][pi]),
             "marked": marked,
             "solution": copy.deepcopy(solution),
         })
