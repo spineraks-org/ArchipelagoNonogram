@@ -1,7 +1,7 @@
 from worlds.AutoWorld import WebWorld, World
 from BaseClasses import Tutorial, Item, ItemClassification, Location, Region
 from dataclasses import dataclass
-from Options import OptionSet, PerGameCommonOptions, Range
+from Options import OptionSet, PerGameCommonOptions, Range, Toggle
 import json
 import os
 from pathlib import Path
@@ -54,13 +54,21 @@ class ClueTypes(OptionSet):
     display_name = "Clue types"
     valid_keys = ['Ω', 'E', '/', '-', '+']
     default = [] 
+    
+class EnableNonograhmmHints(Toggle):
+    """
+    Whether the website has a hint button that shows where the next steps in solving the puzzle are.
+    """
+
+    display_name = "Enable Nonograhmm hints"
+    default = True
 
 @dataclass
 class NonograhmmOptions(PerGameCommonOptions):
     width_of_grid: WidthOfGrid
     height_of_grid: HeightOfGrid
     clue_types: ClueTypes
-    
+    enables_nonograhmm_hints: EnableNonograhmmHints
 class NonograhmmLocation(Location):
     game: str = "Nonograhmm"
 
@@ -74,7 +82,7 @@ class NonograhmmWorld(World):
     web = NonograhmmWeb()
     item_name_to_id = {"Nonograhmm clues": 67}
     location_name_to_id = {f"{i} correct": 67 + i for i in range(1,401)}
-    ap_world_version = "0.2.0"
+    ap_world_version = "0.2.1"
     
     def create_item(self, name: str) -> Item:
         return Item(name, ItemClassification.progression, self.item_name_to_id[name], self.player)
@@ -107,7 +115,9 @@ class NonograhmmWorld(World):
         self.multiworld.completion_condition[self.player] = lambda state: state.has("Nonograhmm clues", self.player, num_steps)
         
     def fill_slot_data(self):
-        return {'puzzle': json.dumps(self.puzzle, separators=(',',':')), 'apworld_version': self.ap_world_version}
+        return {'puzzle': json.dumps(self.puzzle, separators=(',',':')), 
+                'apworld_version': self.ap_world_version,
+                'enables_nonograhmm_hints': self.options.enables_nonograhmm_hints.value}
     
     def write_spoiler(self, spoiler_handle) -> None:
         spoiler_handle.write(f"Puzzle: {self.puzzle}\n")
