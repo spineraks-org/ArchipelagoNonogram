@@ -124,10 +124,13 @@ def build_up_game(clues, list_of_symbols, random):
                     raise Exception("Nonogram: Unknown clue type selected")
                 
 
+        new_value = None
         if possible_other_clues:
             masked[side][li][pi] = random.choice(possible_other_clues)
+            new_value = masked[side][li][pi]
         else:
             masked[side][li][pi] = value
+            new_value = value
             # pbar.update(1)
 
         # prepare solver input (deep copy to avoid accidental sharing)
@@ -203,6 +206,7 @@ def build_puzzle(options, random):
         "G": clue_order,
         "S": steps[-1]["solution"],
     }
+    
     # print(output)
     # showSolution(output["S"])
     
