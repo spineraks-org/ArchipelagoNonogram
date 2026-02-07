@@ -13,7 +13,10 @@ def is_valid(clues_so_far, grid_line, only_conflict):
     sol = [-1] * len(grid_line)
     for [p, s] in clues_so_far:
         for i in range(p, p + s):
+            if i >= len(sol):
+                return False
             sol[i] = 1
+            # IndexError: list assignment index out of range, means clue goes out of bounds, check max range
     # print(grid_line)
     # print(sol)
     if not only_conflict:
@@ -45,6 +48,21 @@ def find_any_solution(clues, grid_line):
             min_lengths.append(2)
             max_lengths.append(m)
             possible_lengths.append(list(range(2, m + 1, 2)))
+        elif '/' in str(c):
+            parts = str(c).split('/')
+            min_c = int(parts[0])
+            max_c = int(parts[1])
+            min_lengths.append(min_c)
+            max_lengths.append(max_c)
+            possible_lengths.append([min_c, max_c])
+        elif '-' in str(c):
+            parts = str(c).split('-')
+            max_c = int(parts[0])
+            possible_lengths.append(list(range(1, min(max_c + 1, m + 1))))
+        elif '+' in str(c):
+            parts = str(c).split('+')
+            min_c = int(parts[0])
+            possible_lengths.append(list(range(min_c, m + 1)))
         else:
             min_lengths.append(int(c))
             max_lengths.append(int(c))
@@ -70,7 +88,7 @@ def find_any_solution(clues, grid_line):
         max_start = len(grid_line) - min_total_from_idx
 
         for s in range(pos_min, max_start + 1):
-            if clues[idx] not in ['?', 'Ω', 'E']:
+            if clues[idx] not in ['?', 'Ω', 'E'] and '/' not in str(clues[idx]) and '-' not in str(clues[idx]) and '+' not in str(clues[idx]):
                 length = int(clues[idx])
                 curr.append([s, length])
                 backtrack(idx + 1, s + length + 1)

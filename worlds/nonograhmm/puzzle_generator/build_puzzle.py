@@ -54,7 +54,7 @@ def build_up_game(clues, list_of_symbols, random):
         for side in (0, 1):
             for li, cl in enumerate(mask[side]):
                 for pi, val in enumerate(cl):
-                    if val == "?" or val == 'Ω' or val == 'E':
+                    if val == "?" or val == 'Ω' or val == 'E' or '/' in str(val) or '-' in str(val) or '+' in str(val):
                         pos.append((side, li, pi))
         return pos
 
@@ -75,17 +75,54 @@ def build_up_game(clues, list_of_symbols, random):
     # print(f"Starting build-up: {marked} cells marked, {len(positions)} clues to reveal.")
     
     # with tqdm(total=len(positions), desc="Building up Nonogram puzzle") as pbar:
-    while marked < len(clues[0]) * len(clues[1]):
+    while positions:
         side, li, pi = random.choice(positions)
         # install the real value from orig into masked
         value = orig[side][li][pi]
         
         possible_other_clues = []
         if masked[side][li][pi] == '?':
+            possible_directions = []
             if value % 2 == 1 and 'Ω' in list_of_symbols:
-                possible_other_clues.append('Ω')
-            elif value % 2 == 0 and 'E' in list_of_symbols:
-                possible_other_clues.append('E')
+                possible_directions.append('Ω')
+                possible_directions.append('Ω')
+            if value % 2 == 0 and 'E' in list_of_symbols:
+                possible_directions.append('E')
+                possible_directions.append('E')
+            if '/' in list_of_symbols:
+                possible_directions.append('/')
+            if '-' in list_of_symbols:
+                possible_directions.append('-')
+            if '+' in list_of_symbols:
+                possible_directions.append('+')
+            
+            if possible_directions:
+                direction = random.choice(possible_directions)
+                
+                if direction == 'Ω':
+                    possible_other_clues.append('Ω')
+                elif direction == 'E':
+                    possible_other_clues.append('E')
+                elif direction == '/':
+                    if value == 1:
+                        other_value = value + random.choice([1,2])
+                    elif value == 2:
+                        other_value = value + random.choice([-1,1,2])
+                    else:
+                        other_value = value + random.choice([-2,-1,1,2])
+                    clue = f"{min(value, other_value)}/{max(value, other_value)}"
+                    possible_other_clues.append(clue)
+                elif direction == '-':
+                    other_value = value + random.randint(1,3)
+                    clue = f"{other_value}-"
+                    possible_other_clues.append(clue)
+                elif direction == '+':
+                    other_value = max(1, value - random.randint(1,3))
+                    clue = f"{other_value}+"
+                    possible_other_clues.append(clue)
+                else:
+                    raise Exception("Nonogram: Unknown clue type selected")
+                
 
         new_value = None
         if possible_other_clues:
@@ -112,7 +149,7 @@ def build_up_game(clues, list_of_symbols, random):
         
         steps.append({
             "step": step,
-            "changed": (side, li, pi, new_value),
+            "changed": (side, li, pi, masked[side][li][pi]),
             "marked": marked,
             "solution": copy.deepcopy(solution),
         })
