@@ -1,13 +1,12 @@
 from worlds.AutoWorld import WebWorld, World
 from BaseClasses import Tutorial, Item, ItemClassification, Location, Region
-from dataclasses import dataclass
-from Options import OptionSet, PerGameCommonOptions, Range, Toggle
+from .Options import NonograhmmOptions
 import json
 import os
 from pathlib import Path
 from worlds.generic.Rules import set_rule
 from .puzzle_generator.build_puzzle import build_puzzle
-import typing
+from typing import Dict, Any, Optional
 
 class NonograhmmWeb(WebWorld):
     tutorials = [
@@ -21,58 +20,10 @@ class NonograhmmWeb(WebWorld):
         )
     ]
 
-class WidthOfGrid(Range):
-    """
-    Width of the Nonograhmm grid.
-    """
-    display_name = "Width of Grid"
-    range_start = 5
-    range_end = 15
-    default = 5
-    
-class HeightOfGrid(Range):
-    """
-    Height of the Nonograhmm grid.
-    """
-    display_name = "Height of Grid"
-    range_start = 5
-    range_end = 15
-    default = 5
-    
-class ClueTypes(OptionSet):
-    """
-    Clues that a '?' may get replaced by before a number is shown.
-    It is recommended to first play without these extra clue types.
-    Put them in the yaml like this: ['Ω', 'E', '/']
-    Ω: number is odd
-    E: number is even
-    /: number is one of two possible values (e.g., "2/4" means the number is either 2 or 4)
-    -: number is at most a certain value (e.g., "3-" means the number is 1, 2, or 3)
-    +: number is at least a certain value (e.g., "3+" means the number is 3 or greater)
-    """
-
-    display_name = "Clue types"
-    valid_keys = ['Ω', 'E', '/', '-', '+']
-    default = [] 
-    
-class EnableNonograhmmHints(Toggle):
-    """
-    Whether the website has a hint button that shows where the next steps in solving the puzzle are.
-    """
-
-    display_name = "Enable Nonograhmm hints"
-    default = True
-
-@dataclass
-class NonograhmmOptions(PerGameCommonOptions):
-    width_of_grid: WidthOfGrid
-    height_of_grid: HeightOfGrid
-    clue_types: ClueTypes
-    enables_nonograhmm_hints: EnableNonograhmmHints
 class NonograhmmLocation(Location):
     game: str = "Nonograhmm"
 
-    def __init__(self, player: int, name: str, step: int, address: typing.Optional[int], parent):
+    def __init__(self, player: int, name: str, step: int, address: Optional[int], parent):
         super().__init__(player, name, address, parent)
         self.nonograhmm_step = step
 
@@ -88,31 +39,41 @@ class NonograhmmWorld(World):
         return Item(name, ItemClassification.progression, self.item_name_to_id[name], self.player)
     
     def get_filler_item_name(self) -> str:
-        return "Nonograhmm clues"    
+        return "Nonograhmm clues"   
+    
+    @staticmethod
+    def interpret_slot_data(slot_data: Dict[str, Any]) -> Dict[str, Any]:
+        return {"puzzle": slot_data["puzzle"]} 
         
     def generate_early(self):
-        self.puzzle = build_puzzle(self.options, self.random)
-        clue_list = sorted(list(set([clue[1] for clue in self.puzzle['G']]+[0])))
-        num_steps = len(clue_list) - 1
+        if hasattr(self.multiworld, "re_gen_passthrough"):
+            self.puzzle = json.loads(self.multiworld.re_gen_passthrough[self.game]["puzzle"])
+        else:
+            self.puzzle = build_puzzle(self.options, self.random)
+        self.clue_list = sorted(list(set([clue[1] for clue in self.puzzle['G']]+[0])))
+        self.num_steps = len(self.clue_list) - 1
         
+    def create_items(self):
         #items - equal to the number of steps + 1, you start with one
-        self.multiworld.itempool += [self.create_item("Nonograhmm clues") for _ in range(num_steps)]
+        self.multiworld.itempool += [self.create_item("Nonograhmm clues") for _ in range(self.num_steps)]
         self.multiworld.push_precollected(self.create_item("Nonograhmm clues"))
-        
+    
+    def create_regions(self):
         #locations - equal to the number of steps
-        menu = Region("Menu", self.player, self.multiworld)
-        menu.locations = [
-            NonograhmmLocation(self.player, f"{C} correct", step=i, address=67+C, parent=menu) 
-                for i, C in enumerate(clue_list[1:], start=1)
+        self.menu = Region("Menu", self.player, self.multiworld)
+        self.menu.locations = [
+            NonograhmmLocation(self.player, f"{C} correct", step=i, address=67+C, parent=self.menu) 
+                for i, C in enumerate(self.clue_list[1:], start=1)
         ]
-        self.multiworld.regions.append(menu)
-        
+        self.multiworld.regions.append(self.menu)
+    
+    def set_rules(self):
         #rules - each step requires having that many clues
-        for i, loc in enumerate(menu.locations):
+        for i, loc in enumerate(self.menu.locations):
             set_rule(loc, lambda state, step=loc.nonograhmm_step: state.has(f"Nonograhmm clues", self.player, step))
         
         #victory - have number of clues equal to number of steps
-        self.multiworld.completion_condition[self.player] = lambda state: state.has("Nonograhmm clues", self.player, num_steps)
+        self.multiworld.completion_condition[self.player] = lambda state: state.has("Nonograhmm clues", self.player, self.num_steps)
         
     def fill_slot_data(self):
         return {'puzzle': json.dumps(self.puzzle, separators=(',',':')), 
