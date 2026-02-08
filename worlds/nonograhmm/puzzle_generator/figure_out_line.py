@@ -1,62 +1,25 @@
-def is_valid(clues_so_far, grid_line, only_conflict):
-    if only_conflict:
-        if not clues_so_far:
-            return True
-        last_p, last_s = clues_so_far[-1]
-        if last_p + last_s > len(grid_line):
-            return False
-        # Check last block cells are fill-compatible
-        for i in range(last_p, last_p + last_s):
-            if grid_line[i] < 0:
-                return False
-        # Check gap before last block
-        gap_start = (clues_so_far[-2][0] + clues_so_far[-2][1]) if len(clues_so_far) >= 2 else 0
-        for i in range(gap_start, last_p):
-            if grid_line[i] > 0:
-                return False
-        return True
-
-    sol = [-1] * len(grid_line)
-    for [p, s] in clues_so_far:
-        for i in range(p, p + s):
-            if i >= len(sol):
-                return False
-            sol[i] = 1
-    return all(
-        (g == 0 or (s > 0 and g > 0) or (s < 0 and g < 0))
-        for s, g in zip(sol, grid_line)
-    )
-
-            
 def find_any_solution(clues, grid_line):
-    # print("find_any_solution called with:", clues, grid_line)
     n = len(clues)
     m = len(grid_line)
-    
+
     # minimal length for each clue ( '?' -> 1, otherwise numeric )
-    min_lengths = []
-    max_lengths = []
     possible_lengths = []
+    min_lengths = []
     for c in clues:
         if c == '?':
             min_lengths.append(1)
-            max_lengths.append(m)  # theoretically unbounded
             possible_lengths.append(list(range(1, m + 1)))
         elif c == 'Ω':
             min_lengths.append(1)
-            max_lengths.append(m)
             possible_lengths.append(list(range(1, m + 1, 2)))
         elif c == 'E':
             min_lengths.append(2)
-            max_lengths.append(m)
             possible_lengths.append(list(range(2, m + 1, 2)))
         elif '/' in str(c):
             parts = str(c).split('/')
             min_c = int(parts[0])
-            max_c = int(parts[1])
             min_lengths.append(min_c)
-            max_lengths.append(max_c)
-            possible_lengths.append([min_c, max_c])
+            possible_lengths.append([min_c, int(parts[1])])
         elif '-' in str(c):
             parts = str(c).split('-')
             max_c = int(parts[0])
@@ -68,11 +31,9 @@ def find_any_solution(clues, grid_line):
             possible_lengths.append(list(range(min_c, m + 1)))
             min_lengths.append(min_c)
         else:
-            min_lengths.append(int(c))
-            max_lengths.append(int(c))
-            possible_lengths.append([int(c)])
-    curr = []
-    done = []
+            val = int(c)
+            min_lengths.append(val)
+            possible_lengths.append([val])
 
     # min_space_from[i] = minimum cells needed for blocks i..n-1 including gaps
     min_space_from = [0] * (n + 1)
@@ -81,53 +42,63 @@ def find_any_solution(clues, grid_line):
         if i < n - 1:
             min_space_from[i] += 1
 
-    def backtrack(idx, pos_min):
-        if done:
-            return curr
-        if idx == n:
-            if is_valid(curr, grid_line, False):
-                done.append(True)
-                return curr
+    curr = []
+    found = False
+
+    def backtrack(idx, min_start):
+        nonlocal found
+        if found:
             return
-        else:
-            if not is_valid(curr, grid_line, True):
-                return
+
+        # Check mandatory gap cell after previous block (only if within grid bounds)
+        if 0 < min_start <= m and grid_line[min_start - 1] > 0:
+            return
+
+        if idx == n:
+            for i in range(min_start, m):
+                if grid_line[i] > 0:
+                    return
+            found = True
+            return
 
         # minimal total length required from idx..end (including 1-space between blocks)
         max_start = m - min_space_from[idx]
+        # minimal total length required AFTER current block
+        max_end = m - min_space_from[idx + 1]
+        lengths = possible_lengths[idx]
 
-        for s in range(pos_min, max_start + 1):
-            if clues[idx] not in ['?', 'Ω', 'E'] and '/' not in str(clues[idx]) and '-' not in str(clues[idx]) and '+' not in str(clues[idx]):
-                length = int(clues[idx])
-                curr.append([s, length])
-                backtrack(idx + 1, s + length + 1)
-                if done:
-                    return curr
-                curr.pop()
-            else:
-                # compute minimal total AFTER current block
-                max_len = m - s - min_space_from[idx + 1]
-                for length in possible_lengths[idx]:
-                    if length > max_len:
+        for s in range(min_start, max_start + 1):
+            # Incremental gap check: if a filled cell is in the gap, no later start works either
+            if s > min_start and grid_line[s - 1] > 0:
+                break
+
+            for length in lengths:
+                end = s + length
+                if end > max_end:
+                    break
+                ok = True
+                for i in range(s, end):
+                    if grid_line[i] < 0:
+                        ok = False
                         break
-                    curr.append([s, length])
-                    backtrack(idx + 1, s + length + 1)
-                    if done:
-                        return curr
-                    curr.pop()
-                    
-    def write_out_configuration(config, m):
-        line = [-1] * m
-        for start, length in config:
-            for i in range(start, start + length):
-                line[i] = 1
-        return line
+                if not ok:
+                    continue
+                curr.append((s, length))
+                backtrack(idx + 1, end + 1)
+                if found:
+                    return
+                curr.pop()
 
-    sol = backtrack(0, 0)
-    if not done:
+    backtrack(0, 0)
+
+    if not found:
         return False
-    # print("Solution found:", sol)
-    return write_out_configuration(sol, m)
+
+    sol = [-1] * m
+    for start, length in curr:
+        for i in range(start, start + length):
+            sol[i] = 1
+    return sol
 
 
 def update_lists(possible_black, possible_white, sol):
