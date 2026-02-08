@@ -1,8 +1,6 @@
 
 import copy
-# import json
-
-# from tqdm import tqdm
+# import time
 
 from .generate_random_nonogram import generate_random_clues
 from .nonogram_solver import solve_nonogram_simple
@@ -26,6 +24,8 @@ def build_up_game(clues, list_of_symbols, random):
       - marked: number of marked cells after solving
       - masked_clues: deep copy of the current masked clues
     """
+    
+    # print("7 Starting build-up game... ", time.time())
 
     # deep copy original clues to avoid mutating caller data
     orig = [ [list(cl) for cl in part] for part in (clues[0], clues[1]) ]
@@ -42,9 +42,9 @@ def build_up_game(clues, list_of_symbols, random):
         # showSolution(SOL)
         pass
     else:
-        # print("The provided clues do not lead to a unique solution.")
-        return False
+        raise Exception(f"The provided clues do not lead to a unique solution (only {N} cells determined), clues: {clues}")
     
+    # print("Original clues verified, time: ", time.time())
 
     # create masked version: replace each entry in each clue-list with "?"
     masked = [ [ ["?" for _ in cl] for cl in part ] for part in orig ]
@@ -72,7 +72,8 @@ def build_up_game(clues, list_of_symbols, random):
     })
     step = 1
     positions = collect_positions(masked)
-    # print(f"Starting build-up: {marked} cells marked, {len(positions)} clues to reveal.")
+    
+    # print(f"Starting build-up: {marked} cells marked, {len(positions)} clues to reveal, time: ", time.time())
     
     # with tqdm(total=len(positions), desc="Building up Nonogram puzzle") as pbar:
     while positions:
@@ -137,7 +138,11 @@ def build_up_game(clues, list_of_symbols, random):
         top_mask = [list(cl) for cl in masked[0]]
         left_mask = [list(cl) for cl in masked[1]]
         
-        S = solve_nonogram_simple([top_mask, left_mask], grid=copy.deepcopy(solution))
+        # print(f"Re-solving after revealing clue {step}: side={side} line_index={li} pos_index={pi} value={new_value}, time: ", time.time())
+        S = solve_nonogram_simple([top_mask, left_mask], grid=copy.deepcopy(solution)
+                                  , new_clues=[(side, li)]
+                                  )
+        # print(f"Solved after revealing clue {step}, time: ", time.time())
         # print(solution)
         # print(S)
         # print("-")
@@ -155,6 +160,9 @@ def build_up_game(clues, list_of_symbols, random):
         })
         step += 1
         positions = collect_positions(masked)
+        
+    # print(f"Build-up completed: {marked} cells marked, time: ", time.time())
+        
     return steps, solution
 
 def showSolution(solution):
@@ -166,14 +174,26 @@ def showSolution(solution):
     print()
 
 def build_puzzle(options, random):
+    # print("Start, time: ", time.time())
     x = options.width_of_grid.value
     y = options.height_of_grid.value
-    list_of_symbols = options.clue_types.value
-    
+    list_of_symbols = set(options.clue_types.value)
+
+    if 'O' in list_of_symbols:
+        list_of_symbols.remove('O')
+        list_of_symbols.add('Ω')
+        
+    if 'random' in list_of_symbols:
+        list_of_symbols.discard('random')
+        for sym in ['O', 'E', '/', '-', '+']:
+            if random.choice([True, False]):
+                list_of_symbols.add(sym)
     
     rando_clues, G = generate_random_clues(x, y, x*y/4, random)
     if not rando_clues:
         return False
+    
+    # print("Random clues generated, time: ", time.time())
 
     top_clues = rando_clues[0]
     left_clues = rando_clues[1]
@@ -186,6 +206,8 @@ def build_puzzle(options, random):
     build_up = build_up_game(CLUES, list_of_symbols, random)
     if not build_up:
         return False
+    
+    # print("Build-up completed, time: ", time.time())
     
     steps = build_up[0]
     
@@ -210,5 +232,5 @@ def build_puzzle(options, random):
     # print(output)
     # showSolution(output["S"])
     
+    # print("Puzzle built, time: ", time.time())
     return output
-    

@@ -31,7 +31,7 @@ class NonograhmmWorld(World):
     game: str = "Nonograhmm"
     options_dataclass = NonograhmmOptions
     web = NonograhmmWeb()
-    item_name_to_id = {"Nonograhmm clues": 67}
+    item_name_to_id = {"Nonograhmm clues": 67, ":)": 69}
     location_name_to_id = {f"{i} correct": 67 + i for i in range(1,401)}
     ap_world_version = "0.2.1"
     
@@ -39,7 +39,7 @@ class NonograhmmWorld(World):
         return Item(name, ItemClassification.progression, self.item_name_to_id[name], self.player)
     
     def get_filler_item_name(self) -> str:
-        return "Nonograhmm clues"   
+        return ":)"   
     
     @staticmethod
     def interpret_slot_data(slot_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -50,6 +50,8 @@ class NonograhmmWorld(World):
             self.puzzle = json.loads(self.multiworld.re_gen_passthrough[self.game]["puzzle"])
         else:
             self.puzzle = build_puzzle(self.options, self.random)
+        if not self.puzzle:
+            raise Exception("Failed to generate a valid Nonograhmm puzzle aaaaaaaaaaaaaa.")
         self.clue_list = sorted(list(set([clue[1] for clue in self.puzzle['G']]+[0])))
         self.num_steps = len(self.clue_list) - 1
         

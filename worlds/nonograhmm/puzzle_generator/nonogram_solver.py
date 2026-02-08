@@ -9,7 +9,9 @@ def showSolution(solution):
         print()
     print()
 
-def solve_nonogram_simple(all_clues, grid = None):    
+def solve_nonogram_simple(all_clues, grid = None, new_clues = None):    
+    if new_clues and not grid:
+        raise Exception("New clues provided without a grid to apply them to")
     next_clue = (max(cell[1] for row in grid for cell in row) if grid else 0) + 1
     # print(next_clue)
     
@@ -20,10 +22,12 @@ def solve_nonogram_simple(all_clues, grid = None):
         grid = [[[0, 0, -1] for _ in range(X)] for _ in range(Y)]
     
     todo = []
-    todo += [(0, c) for c in range(X)]
-    todo += [(1, r) for r in range(Y)]
+    if new_clues:
+        todo += new_clues
+    else:
+        todo += [(0, c) for c in range(X)]
+        todo += [(1, r) for r in range(Y)]
     
-    steps = 0
     while todo:
         # pp(grid)
         # print()
@@ -32,34 +36,32 @@ def solve_nonogram_simple(all_clues, grid = None):
         if side == 0:
             c = index
             clues = all_clues[0][c]
-            grid_part_1 = [grid[r][c][0] for r in range(Y)]
-            
-            sol = get_sure_squares(clues, grid_part_1)
-            if sol is False:
-                return False
-            for r in range(Y):
-                if grid[r][c][0] == 0 and sol[r] != 0:
-                    todo.append((1, r))
-                    grid[r][c] = [sol[r], next_clue, side]
-                    # print("1 setting grid[",r,"][",c,"] to", sol[r] * next_clue)
-                    next_clue += 1
-                    # showSolution(grid)
-                
+            grid_part = [grid[r][c][0] for r in range(Y)]
         else:
             r = index
             clues = all_clues[1][r]
             grid_part = [cell[0] for cell in grid[r]]
-            sol = get_sure_squares(clues, grid_part)
-            if sol is False:
-                print("Unsolvable line detected at row", r)
-                return False
+                    
+        sol = get_sure_squares(clues, grid_part)
+        
+        if sol is False:
+            print("Unsolvable line detected")
+            return False
+        
+        if side == 0:
+            for r in range(Y):
+                if grid[r][c][0] == 0 and sol[r] != 0:
+                    todo.append((1, r))
+                    grid[r][c] = [sol[r], next_clue, side]
+                    next_clue += 1
+        else:
             for c in range(X):
                 if grid[r][c][0] == 0 and sol[c] != 0:
                     todo.append((0, c))
                     grid[r][c] = [sol[c], next_clue, side]
-                    # print("2 setting grid[",r,"][",c,"] to", sol[c] * next_clue)
                     next_clue += 1
-                    # showSolution(grid)
+                    
+                    
     amount_sure = sum(1 for r in range(Y) for c in range(X) if grid[r][c][0] != 0)
     return grid, amount_sure
 
