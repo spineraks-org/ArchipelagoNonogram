@@ -160,7 +160,13 @@ def get_sure_squares(clues, grid_line):
         # print(possible_black, possible_white)
         
         if grid_line[i] == 0:
+            if possible_black[i] and possible_white[i]:
+                continue
             for opt in [1,-1]:
+                if opt == 1 and possible_black[i]:
+                    continue
+                if opt == -1 and possible_white[i]:
+                    continue
                 test_line = grid_line.copy()
                 test_line[i] = opt
                 test_solution = find_any_solution(clues, test_line)
