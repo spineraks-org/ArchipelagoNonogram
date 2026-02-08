@@ -1,23 +1,30 @@
 def is_valid(clues_so_far, grid_line, only_conflict):
+    if only_conflict:
+        if not clues_so_far:
+            return True
+        last_p, last_s = clues_so_far[-1]
+        if last_p + last_s > len(grid_line):
+            return False
+        # Check last block cells are fill-compatible
+        for i in range(last_p, last_p + last_s):
+            if grid_line[i] < 0:
+                return False
+        # Check gap before last block
+        gap_start = (clues_so_far[-2][0] + clues_so_far[-2][1]) if len(clues_so_far) >= 2 else 0
+        for i in range(gap_start, last_p):
+            if grid_line[i] > 0:
+                return False
+        return True
+
     sol = [-1] * len(grid_line)
     for [p, s] in clues_so_far:
         for i in range(p, p + s):
             if i >= len(sol):
                 return False
             sol[i] = 1
-            # IndexError: list assignment index out of range, means clue goes out of bounds, check max range
-    if not only_conflict:
-        return all(
-            (g == 0 or (s > 0 and g > 0) or (s < 0 and g < 0))
-            for s, g in zip(sol, grid_line)
-        )
-
-    if not clues_so_far:
-        return True
-    check_until = clues_so_far[-1][0] + clues_so_far[-1][1]
     return all(
         (g == 0 or (s > 0 and g > 0) or (s < 0 and g < 0))
-        for s, g in zip(sol[:check_until], grid_line[:check_until])
+        for s, g in zip(sol, grid_line)
     )
 
             
