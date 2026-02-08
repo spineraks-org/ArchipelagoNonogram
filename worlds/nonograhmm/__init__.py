@@ -33,7 +33,7 @@ class NonograhmmWorld(World):
     web = NonograhmmWeb()
     item_name_to_id = {"Nonograhmm clues": 67, ":)": 69}
     location_name_to_id = {f"{i} correct": 67 + i for i in range(1,401)}
-    ap_world_version = "0.2.1"
+    ap_world_version = "0.2.2"
     
     def create_item(self, name: str) -> Item:
         return Item(name, ItemClassification.progression, self.item_name_to_id[name], self.player)
