@@ -1,14 +1,3 @@
-
-from pprint import pp
-
-def sign(num):
-    if num > 0:
-        return 1
-    elif num < 0:
-        return -1
-    else:
-        return 0
-
 def is_valid(clues_so_far, grid_line, only_conflict):
     sol = [-1] * len(grid_line)
     for [p, s] in clues_so_far:
@@ -17,14 +6,20 @@ def is_valid(clues_so_far, grid_line, only_conflict):
                 return False
             sol[i] = 1
             # IndexError: list assignment index out of range, means clue goes out of bounds, check max range
-    # print(grid_line)
-    # print(sol)
     if not only_conflict:
-        return all([s == sign(g) or g == 0 for s, g in zip(sol, grid_line)])
+        return all(
+            (g == 0 or (s > 0 and g > 0) or (s < 0 and g < 0))
+            for s, g in zip(sol, grid_line)
+        )
+
     if not clues_so_far:
         return True
     check_until = clues_so_far[-1][0] + clues_so_far[-1][1]
-    return all([s == sign(g) or g == 0 for s, g in zip(sol[0:check_until], grid_line[0:check_until])])
+    return all(
+        (g == 0 or (s > 0 and g > 0) or (s < 0 and g < 0))
+        for s, g in zip(sol[:check_until], grid_line[:check_until])
+    )
+
             
 def find_any_solution(clues, grid_line):
     # print("find_any_solution called with:", clues, grid_line)
