@@ -54,16 +54,25 @@ def find_any_solution(clues, grid_line):
             parts = str(c).split('-')
             max_c = int(parts[0])
             possible_lengths.append(list(range(1, min(max_c + 1, m + 1))))
+            min_lengths.append(1)
         elif '+' in str(c):
             parts = str(c).split('+')
             min_c = int(parts[0])
             possible_lengths.append(list(range(min_c, m + 1)))
+            min_lengths.append(min_c)
         else:
             min_lengths.append(int(c))
             max_lengths.append(int(c))
             possible_lengths.append([int(c)])
     curr = []
     done = []
+
+    # min_space_from[i] = minimum cells needed for blocks i..n-1 including gaps
+    min_space_from = [0] * (n + 1)
+    for i in range(n - 1, -1, -1):
+        min_space_from[i] = min_lengths[i] + min_space_from[i + 1]
+        if i < n - 1:
+            min_space_from[i] += 1
 
     def backtrack(idx, pos_min):
         if done:
@@ -78,9 +87,7 @@ def find_any_solution(clues, grid_line):
                 return
 
         # minimal total length required from idx..end (including 1-space between blocks)
-        remaining_blocks = n - idx
-        min_total_from_idx = sum(min_lengths[idx:]) + max(0, remaining_blocks - 1)
-        max_start = len(grid_line) - min_total_from_idx
+        max_start = m - min_space_from[idx]
 
         for s in range(pos_min, max_start + 1):
             if clues[idx] not in ['?', 'Ω', 'E'] and '/' not in str(clues[idx]) and '-' not in str(clues[idx]) and '+' not in str(clues[idx]):
@@ -92,11 +99,7 @@ def find_any_solution(clues, grid_line):
                 curr.pop()
             else:
                 # compute minimal total AFTER current block
-                if idx == n - 1:
-                    min_after = 0
-                else:
-                    min_after = sum(min_lengths[idx + 1:]) + max(0, (n - idx - 1) - 1)
-                max_len = len(grid_line) - s - min_after
+                max_len = m - s - min_space_from[idx + 1]
                 for length in possible_lengths[idx]:
                     if length > max_len:
                         break
