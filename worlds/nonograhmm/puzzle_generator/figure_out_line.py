@@ -1,169 +1,132 @@
-def find_any_solution(clues, grid_line):
+def get_sure_squares(clues, grid_line):
     n = len(clues)
     m = len(grid_line)
 
-    # minimal length for each clue ( '?' -> 1, otherwise numeric )
     possible_lengths = []
-    min_lengths = []
     for c in clues:
         if c == '?':
-            min_lengths.append(1)
             possible_lengths.append(list(range(1, m + 1)))
         elif c == 'Ω':
-            min_lengths.append(1)
             possible_lengths.append(list(range(1, m + 1, 2)))
         elif c == 'E':
-            min_lengths.append(2)
             possible_lengths.append(list(range(2, m + 1, 2)))
         elif '/' in str(c):
             parts = str(c).split('/')
-            min_c = int(parts[0])
-            min_lengths.append(min_c)
-            possible_lengths.append([min_c, int(parts[1])])
+            possible_lengths.append([int(parts[0]), int(parts[1])])
         elif '-' in str(c):
             parts = str(c).split('-')
             max_c = int(parts[0])
             possible_lengths.append(list(range(1, min(max_c + 1, m + 1))))
-            min_lengths.append(1)
         elif '+' in str(c):
             parts = str(c).split('+')
             min_c = int(parts[0])
             possible_lengths.append(list(range(min_c, m + 1)))
-            min_lengths.append(min_c)
         else:
-            val = int(c)
-            min_lengths.append(val)
-            possible_lengths.append([val])
+            possible_lengths.append([int(c)])
 
-    # min_space_from[i] = minimum cells needed for blocks i..n-1 including gaps
-    min_space_from = [0] * (n + 1)
-    for i in range(n - 1, -1, -1):
-        min_space_from[i] = min_lengths[i] + min_space_from[i + 1]
-        if i < n - 1:
-            min_space_from[i] += 1
+    black_ok_prefix = [0] * (m + 1)
+    for j in range(m):
+        black_ok_prefix[j + 1] = black_ok_prefix[j] + (1 if grid_line[j] >= 0 else 0)
 
-    curr = []
-    found = False
+    def can_place_black(a, b):
+        return black_ok_prefix[b] - black_ok_prefix[a] == b - a
 
-    def backtrack(idx, min_start):
-        nonlocal found
-        if found:
-            return
+    # Forward check: F[i][j] = True if blocks 0..i-1 can be validly placed
+    # such that position j is available (all cells before j are accounted for as
+    # either part of a block or a valid white gap).
+    F = [[False] * (m + 1) for _ in range(n + 1)]
+    F[0][0] = True
 
-        # Check mandatory gap cell after previous block (only if within grid bounds)
-        if 0 < min_start <= m and grid_line[min_start - 1] > 0:
-            return
-
-        if idx == n:
-            for i in range(min_start, m):
-                if grid_line[i] > 0:
-                    return
-            found = True
-            return
-
-        # minimal total length required from idx..end (including 1-space between blocks)
-        max_start = m - min_space_from[idx]
-        # minimal total length required AFTER current block
-        max_end = m - min_space_from[idx + 1]
-        lengths = possible_lengths[idx]
-
-        for s in range(min_start, max_start + 1):
-            # Incremental gap check: if a filled cell is in the gap, no later start works either
-            if s > min_start and grid_line[s - 1] > 0:
-                break
-
-            for length in lengths:
-                end = s + length
-                if end > max_end:
-                    break
-                ok = True
-                for i in range(s, end):
-                    if grid_line[i] < 0:
-                        ok = False
-                        break
-                if not ok:
-                    continue
-                curr.append((s, length))
-                backtrack(idx + 1, end + 1)
-                if found:
-                    return
-                curr.pop()
-
-    backtrack(0, 0)
-
-    if not found:
-        return False
-
-    sol = [-1] * m
-    for start, length in curr:
-        for i in range(start, start + length):
-            sol[i] = 1
-    return sol
-
-
-def update_lists(possible_black, possible_white, sol):
-    for i in range(len(sol)):
-        if sol[i] == 1:
-            possible_black[i] = True
-        elif sol[i] == -1:
-            possible_white[i] = True
-    
-def get_sure_squares(clues, grid_line):
-    first_solution = find_any_solution(clues, grid_line)
-    if not first_solution:
-        print("No solution found for line:", clues, grid_line)
-        return False
-    
-    # print("First solution found:", first_solution)
-    
-    possible_black = [i == 1 for i in first_solution]
-    possible_white = [i == -1 for i in first_solution]
-    
-    for i in range(len(grid_line)):
-        if grid_line[i] == 1:
-            possible_black[i] = True
-            possible_white[i] = False
-            continue
-        if grid_line[i] == -1:
-            possible_black[i] = False
-            possible_white[i] = True
-            continue
-        # print(possible_black, possible_white)
-        
-        if grid_line[i] == 0:
-            if possible_black[i] and possible_white[i]:
+    for j in range(m + 1):
+        for i in range(n + 1):
+            if not F[i][j]:
                 continue
-            for opt in [1,-1]:
-                if opt == 1 and possible_black[i]:
+            if j < m and grid_line[j] <= 0:
+                F[i][j + 1] = True
+            if i < n:
+                for L in possible_lengths[i]:
+                    end = j + L
+                    if end > m:
+                        break
+                    if not can_place_black(j, end):
+                        continue
+                    if end == m:
+                        F[i + 1][end] = True
+                    elif grid_line[end] <= 0:
+                        F[i + 1][end + 1] = True
+
+    if not F[n][m]:
+        return False
+
+    # Backward check: B[i][j] = True if blocks i..n-1 can be validly placed in [j, m).
+    B = [[False] * (m + 1) for _ in range(n + 1)]
+    B[n][m] = True
+
+    for j in range(m - 1, -1, -1):
+        for i in range(n, -1, -1):
+            if grid_line[j] <= 0 and B[i][j + 1]:
+                B[i][j] = True
+            if i < n:
+                for L in possible_lengths[i]:
+                    end = j + L
+                    if end > m:
+                        break
+                    if not can_place_black(j, end):
+                        continue
+                    if end == m:
+                        if B[i + 1][end]:
+                            B[i][j] = True
+                            break
+                    elif grid_line[end] <= 0 and B[i + 1][end + 1]:
+                        B[i][j] = True
+                        break
+
+    can_be_white = [False] * m
+    can_be_black = [False] * m
+
+    for p in range(m):
+        if grid_line[p] <= 0:
+            for i in range(n + 1):
+                if F[i][p] and B[i][p + 1]:
+                    can_be_white[p] = True
+                    break
+
+    for i in range(n):
+        for s in range(m):
+            if not F[i][s]:
+                continue
+            for L in possible_lengths[i]:
+                end = s + L
+                if end > m:
+                    break
+                if not can_place_black(s, end):
                     continue
-                if opt == -1 and possible_white[i]:
-                    continue
-                test_line = grid_line.copy()
-                test_line[i] = opt
-                test_solution = find_any_solution(clues, test_line)
-                if test_solution:
-                    update_lists(possible_black, possible_white, test_solution)
-    # print(possible_black)
-    # print(possible_white)
+                ok = False
+                if end == m:
+                    ok = B[i + 1][end]
+                elif grid_line[end] <= 0:
+                    ok = B[i + 1][end + 1]
+                if ok:
+                    for p in range(s, end):
+                        can_be_black[p] = True
+                    if end < m:
+                        can_be_white[end] = True
+
     answer = []
-    for i in range(len(grid_line)):
-        if grid_line[i] != 0:
-            answer.append(grid_line[i])
-            continue
-        
-        if possible_black[i] and not possible_white[i]:
+    for p in range(m):
+        if grid_line[p] != 0:
+            answer.append(grid_line[p])
+        elif can_be_black[p] and not can_be_white[p]:
             answer.append(1)
-        elif possible_white[i] and not possible_black[i]:
+        elif can_be_white[p] and not can_be_black[p]:
             answer.append(-1)
         else:
             answer.append(0)
-    # pp(clues)
-    # pp(grid_line)
-    # pp(answer)
-    # print()
+
     return answer
 
+
 if __name__ == "__main__":
-    q = [0,-2,11,0,1]
+    q = [0, -2, 11, 0, 1]
     print(q)
-    print(get_sure_squares([1,1], q))
+    print(get_sure_squares([1, 1], q))
