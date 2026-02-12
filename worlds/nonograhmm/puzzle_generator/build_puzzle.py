@@ -1,13 +1,5 @@
-
-import copy
-# import time
-
 from .generate_random_nonogram import generate_random_clues
 from .nonogram_solver import solve_nonogram_simple
-
-
-
-
 
 
 def build_up_game(clues, list_of_symbols, random):
@@ -68,7 +60,6 @@ def build_up_game(clues, list_of_symbols, random):
         "step": 0,
         "changed": None,
         "marked": marked,
-        "solution": copy.deepcopy(solution),
     })
     step = 1
     positions = collect_positions(masked)
@@ -139,9 +130,8 @@ def build_up_game(clues, list_of_symbols, random):
         left_mask = [list(cl) for cl in masked[1]]
         
         # print(f"Re-solving after revealing clue {step}: side={side} line_index={li} pos_index={pi} value={new_value}, time: ", time.time())
-        S = solve_nonogram_simple([top_mask, left_mask], grid=copy.deepcopy(solution)
-                                  , new_clues=[(side, li)]
-                                  )
+        S = solve_nonogram_simple([top_mask, left_mask], grid=solution,
+                                  new_clues=[(side, li)])
         # print(f"Solved after revealing clue {step}, time: ", time.time())
         # print(solution)
         # print(S)
@@ -156,7 +146,6 @@ def build_up_game(clues, list_of_symbols, random):
             "step": step,
             "changed": (side, li, pi, masked[side][li][pi]),
             "marked": marked,
-            "solution": copy.deepcopy(solution),
         })
         step += 1
         positions = collect_positions(masked)
@@ -206,10 +195,10 @@ def build_puzzle(options, random):
     build_up = build_up_game(CLUES, list_of_symbols, random)
     if not build_up:
         return False
-    
+
     # print("Build-up completed, time: ", time.time())
-    
-    steps = build_up[0]
+
+    steps, final_solution = build_up
     
     # print(steps)
     
@@ -226,7 +215,7 @@ def build_puzzle(options, random):
     output = {
         "C": start_clues,
         "G": clue_order,
-        "S": steps[-1]["solution"],
+        "S": final_solution,
     }
     
     # print(output)
