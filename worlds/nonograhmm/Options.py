@@ -5,20 +5,22 @@ class WidthOfGrid(Range):
     """
     Width of the Nonograhmm grid.
     Note: this game is harder than you think so start small!
+    Also with big grids, please test if it fits on your screen :')
     """
     display_name = "Width of Grid"
     range_start = 5
-    range_end = 20
+    range_end = 25
     default = 5
     
 class HeightOfGrid(Range):
     """
     Height of the Nonograhmm grid.
     Did I already say this game is harder than you think?
+    And that you should probably test it solo first?
     """
     display_name = "Height of Grid"
     range_start = 5
-    range_end = 20
+    range_end = 25
     default = 5
     
 class ClueTypes(OptionSet):
