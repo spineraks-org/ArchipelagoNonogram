@@ -172,6 +172,13 @@ def build_puzzle(options, random):
         list_of_symbols.remove('O')
         list_of_symbols.add('Ω')
         
+    if 'all' in list_of_symbols:
+        list_of_symbols.discard('all')
+        for sym in ['O', 'E', '/', '-', '+']:
+            list_of_symbols.add(sym)
+            if sym == 'O':
+                list_of_symbols.add('Ω')
+        
     if 'random' in list_of_symbols:
         list_of_symbols.discard('random')
         for sym in ['O', 'E', '/', '-', '+']:

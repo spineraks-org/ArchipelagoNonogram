@@ -9,7 +9,7 @@ import multiprocessing
 
 list_value = [[], ['E', 'Ω'], ['/'], ['+', '-'], ['E', 'Ω', '/', '+', '-']]
 
-sizes = [5,8,10,15,20]
+sizes = [5,8,10,15,20,25]
 
 number_of_cores = max(1, multiprocessing.cpu_count() - 3)
 
@@ -25,7 +25,7 @@ def _generate_task(args):
         clue_types=SimpleNamespace(value=clues)
     )
     for i in range(1,am+1):
-        filename = f"P_{width}_{height}_{c}_{i+1}.txt"
+        filename = f"P_{width}_{height}_{c}_{i}.txt"
         with open(f"{folder}/{filename}", "w", encoding="utf-8") as f:
                 puzzle = build_puzzle(options, random)
                 puzzle_string = json.dumps(puzzle, separators=(',',':'))
@@ -35,10 +35,11 @@ def _generate_task(args):
 if __name__ == "__main__":
     
     tasks = [
-        (width, height, c, clues, 3)
+        (width, height, c, clues, 4)
         for width in sizes
         for height in sizes
         for c, clues in enumerate(list_value)
+        if width == 25 or height == 25
     ]
     
     with open(f"{folder}/ps.txt", "w", encoding="utf-8") as log_file:
