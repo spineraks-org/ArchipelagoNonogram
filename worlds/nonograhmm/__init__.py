@@ -33,7 +33,7 @@ class NonograhmmWorld(World):
     for i in range(50):
         item_name_to_id["No" + "no" * i] = 68 + i
     location_name_to_id = {f"{i} correct": 67 + i for i in range(1,25*25+1)}
-    ap_world_version = "0.3.0"
+    ap_world_version = "0.3.1"
     
     def create_item(self, name: str) -> Item:
         return Item(name, ItemClassification.progression if name == "Nonograhmm clues" else ItemClassification.filler, 
@@ -90,7 +90,7 @@ class NonograhmmWorld(World):
             idx = 0
             while idx < len(clues) and clues[idx] < C:
                 idx += 1
-            loc = NonograhmmLocation(self.player, f"{C} correct", step=idx, address=67+C, parent=self.menu)
+            loc = NonograhmmLocation(self.player, f"{C} correct", step=idx+1, address=67+C, parent=self.menu)
             self.menu.locations.append(loc)
             if C in lock_filler:
                 self.multiworld.get_location(loc.name, self.player).place_locked_item(self.create_item(self.get_filler_item_name()))
